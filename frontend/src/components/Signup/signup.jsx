@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 function Signup() {
@@ -6,10 +6,34 @@ function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('student');
+  const [collegeId, setCollegeId] = useState('');
+  const [departmentId, setDepartmentId] = useState('');
+  const [colleges, setColleges] = useState([]);
+  const [departments, setDepartments] = useState([]);
+
+  useEffect(() => {
+    // Fetch colleges
+    axios.get('http://localhost:3001/colleges')
+      .then(res => setColleges(res.data))
+      .catch(err => alert('Failed to fetch colleges: ' + (err.response?.data?.error || 'Server error')));
+  }, []);
+
+  useEffect(() => {
+    if (collegeId) {
+      // Fetch departments for selected college
+      axios.get('http://localhost:3001/departments', { params: { college_id: collegeId } })
+        .then(res => setDepartments(res.data))
+        .catch(err => alert('Failed to fetch departments: ' + (err.response?.data?.error || 'Server error')));
+    } else {
+      setDepartments([]);
+    }
+  }, [collegeId]);
 
   const handleSignup = async () => {
     try {
-      const response = await axios.post('http://localhost:3001/signup', { name, email, password, role });
+      const response = await axios.post('http://localhost:3001/signup', {
+        name, email, password, role, college_id: collegeId, department_id: departmentId
+      });
       localStorage.setItem('token', response.data.token);
       window.location.href = response.data.role === 'admin' ? '/admin' : response.data.role === 'faculty' ? '/faculty' : '/student';
     } catch (err) {
@@ -42,6 +66,28 @@ function Signup() {
           placeholder="Password"
           className="signup-input"
         />
+        <select
+          value={collegeId}
+          onChange={(e) => setCollegeId(e.target.value)}
+          className="signup-input"
+        >
+          <option value="">Select College</option>
+          {colleges.map(c => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+        {role === 'faculty' && (
+          <select
+            value={departmentId}
+            onChange={(e) => setDepartmentId(e.target.value)}
+            className="signup-input"
+          >
+            <option value="">Select Department</option>
+            {departments.map(d => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
+          </select>
+        )}
         <select
           value={role}
           onChange={(e) => setRole(e.target.value)}
